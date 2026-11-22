@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BrainCircuit, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import signinBackground from '../assets/signin-background.png'
+import '../styles/auth.css'
 
 export default function Login() {
   const [email, setEmail] = useState('')
