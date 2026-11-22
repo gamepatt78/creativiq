@@ -25,6 +25,14 @@ const navItems = [
   { to: '/insights', label: 'AI Insights', icon: BrainCircuit },
 ]
 
+const pageTitles = {
+  '/': 'Overview',
+  '/ads': 'Advertisements',
+  '/compare': 'Creative Comparison',
+  '/insights': 'AI Insights',
+  '/settings': 'Settings',
+}
+
 const chartColors = ['#2563EB', '#7C3AED', '#0D9488', '#D97706', '#DB2777']
 
 function getAdId(ad) {
@@ -81,11 +89,9 @@ function Shell({ children, refresh, onSignOut }) {
     localStorage.setItem('sidebar', collapsed ? 'collapsed' : 'expanded')
   }, [collapsed])
 
-  const current =
-    location.pathname === '/settings' ? 'Settings'
-      : location.pathname.startsWith('/ads/') ? 'Advertisement Detail'
-      : navItems.find((item) => item.to === location.pathname)?.label
-        || 'Overview'
+  const current = location.pathname.startsWith('/ads/')
+    ? 'Advertisement Detail'
+    : pageTitles[location.pathname] || 'Overview'
 
   useEffect(() => {
     document.title = 'CreativIQ | AI Ad Intelligence'
