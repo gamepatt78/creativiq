@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import signinBackground from '../assets/signin-background.png'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -11,7 +12,7 @@ export default function Login() {
 
   if (!isSupabaseConfigured) {
     return (
-      <main className="auth-page">
+      <main className="auth-page" style={{ '--auth-background': `url("${signinBackground}")` }}>
         <section className="auth-card auth-config-card" aria-live="polite">
           <div className="auth-logo">M</div>
           <p className="auth-kicker">MY SIVI INTELLIGENCE</p>
@@ -35,7 +36,7 @@ export default function Login() {
   }
 
   return (
-    <main className="auth-page">
+    <main className="auth-page" style={{ '--auth-background': `url("${signinBackground}")` }}>
       <section className="auth-card" aria-labelledby="login-title">
         <header className="auth-header">
           <div className="auth-logo" aria-hidden="true">M</div>

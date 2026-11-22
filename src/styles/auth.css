@@ -3,7 +3,10 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: #F8FAFC;
+  background:
+    linear-gradient(rgba(248, 250, 252, 0.18), rgba(248, 250, 252, 0.18)),
+    var(--auth-background) center / cover no-repeat,
+    #F8FAFC;
 }
 
 .auth-card {
