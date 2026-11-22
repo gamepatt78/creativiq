@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import {
-  Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
+  Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
   Radar, RadarChart, PolarAngleAxis, PolarGrid, PolarRadiusAxis,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import {
   ArrowLeft, ArrowUpRight, BrainCircuit, ChevronLeft, ChevronRight,
-  CircleGauge, Eye, LayoutDashboard, Lightbulb, LogOut,
+  CircleGauge, Eye, LayoutDashboard, LogOut,
   Megaphone, Menu, RefreshCw, Search, Settings, Target,
   TrendingUp, Users, X,
 } from 'lucide-react'
@@ -26,6 +26,21 @@ const navItems = [
 ]
 
 const chartColors = ['#2563EB', '#7C3AED', '#0D9488', '#D97706', '#DB2777']
+
+function getAdId(ad) {
+  return String(ad?.id || ad?.ad_id || '')
+}
+
+function getHeadline(ad) {
+  return ad?.headline || 'Untitled advertisement'
+}
+
+function getDisplayHeadline(ad, ads = []) {
+  const headline = getHeadline(ad)
+  const duplicateCount = ads.filter((item) => getHeadline(item) === headline).length
+  const adId = getAdId(ad)
+  return duplicateCount > 1 && adId ? `${headline} · ${adId}` : headline
+}
 
 function LoadingState() {
   return (
@@ -56,7 +71,7 @@ function EmptyState({ title = 'No advertisements found', text = 'Try changing yo
   )
 }
 
-function Shell({ children, refresh, onSignOut, ads }) {
+function Shell({ children, refresh, onSignOut }) {
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebar') === 'collapsed')
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -66,9 +81,15 @@ function Shell({ children, refresh, onSignOut, ads }) {
     localStorage.setItem('sidebar', collapsed ? 'collapsed' : 'expanded')
   }, [collapsed])
 
-  useEffect(() => setMobileOpen(false), [location.pathname])
+  const current =
+    location.pathname === '/settings' ? 'Settings'
+      : location.pathname.startsWith('/ads/') ? 'Advertisement Detail'
+      : navItems.find((item) => item.to === location.pathname)?.label
+        || 'Overview'
 
-  const current = navItems.find((item) => item.to === location.pathname)?.label || 'Advertisement'
+  useEffect(() => {
+    document.title = 'CreativIQ | AI Ad Intelligence'
+  }, [])
   const submitSearch = (event) => {
     event.preventDefault()
     if (globalSearch.trim()) {
@@ -93,6 +114,7 @@ function Shell({ children, refresh, onSignOut, ads }) {
             <Link
               key={to}
               to={to}
+              onClick={() => setMobileOpen(false)}
               className={`nav-link ${location.pathname === to || (to !== '/' && location.pathname.startsWith(to)) ? 'active' : ''}`}
               title={collapsed ? label : undefined}
             >
@@ -106,6 +128,7 @@ function Shell({ children, refresh, onSignOut, ads }) {
         <div className="sidebar-bottom">
           <Link
             to="/settings"
+            onClick={() => setMobileOpen(false)}
             className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`}
             title={collapsed ? 'Settings' : undefined}
           >
@@ -253,11 +276,11 @@ function Overview({ ads, loading, error, refresh }) {
       <div className="overview-grid lower-grid">
         <article className="panel ranking-panel">
           <PanelHeader eyebrow="CREATIVE RANKING" title="Top scored ads" action="By AI quality"/>
-          {ranked.length ? <div className="ranked-list">{ranked.map((ad,index)=><Link to={`/ads/${ad.id || ad.ad_id}`} className="ranked-row" key={ad.id || ad.ad_id}><span className="rank-number">{String(index+1).padStart(2,'0')}</span><div><strong>{ad.headline || 'Untitled advertisement'}</strong><small>{ad.advertiser_name || 'Unknown advertiser'}</small></div><div className="mini-score"><strong>{getScore(ad)}</strong><span>/60</span></div><ChevronRight size={16}/></Link>)}</div> : <EmptyState/>}
+          {ranked.length ? <div className="ranked-list">{ranked.map((ad,index)=><Link to={`/ads/${getAdId(ad)}`} className="ranked-row" key={getAdId(ad)}><span className="rank-number">{String(index+1).padStart(2,'0')}</span><div><strong>{getDisplayHeadline(ad,ads)}</strong><small>{ad.advertiser_name || 'Unknown advertiser'}</small></div><div className="mini-score"><strong>{getScore(ad)}</strong><span>/60</span></div><ChevronRight size={16}/></Link>)}</div> : <EmptyState/>}
         </article>
         <article className="panel recent-panel">
           <PanelHeader eyebrow="RECENT ACTIVITY" title="Latest analysis" action={<Link to="/ads">View all <ArrowUpRight size={13}/></Link>}/>
-          {ads.length ? <div className="recent-list">{ads.slice(0,4).map((ad)=><Link to={`/ads/${ad.id || ad.ad_id}`} className="recent-row" key={ad.id || ad.ad_id}><div className="recent-avatar">{(ad.advertiser_name || 'UN').slice(0,2).toUpperCase()}</div><div><strong>{ad.headline || 'Untitled advertisement'}</strong><small>{formatDate(ad.created_at)} · {ad.platform || 'Unknown'}</small></div><ScoreBadge score={getScore(ad)}/></Link>)}</div> : <EmptyState/>}
+          {ads.length ? <div className="recent-list">{ads.slice(0,4).map((ad)=><Link to={`/ads/${getAdId(ad)}`} className="recent-row" key={getAdId(ad)}><div className="recent-avatar">{(ad.advertiser_name || 'UN').slice(0,2).toUpperCase()}</div><div><strong>{getDisplayHeadline(ad,ads)}</strong><small>{formatDate(ad.created_at)} · {ad.platform || 'Unknown'}</small></div><ScoreBadge score={getScore(ad)}/></Link>)}</div> : <EmptyState/>}
         </article>
       </div>
     </div>
@@ -288,7 +311,7 @@ function AdvertisementExplorer({ ads, loading, error, refresh }) {
   const platforms=[...new Set(ads.map((ad)=>ad.platform).filter(Boolean))]
   const filtered=useMemo(()=>{
     const result=ads.filter((ad)=>{
-      const text=`${ad.advertiser_name||''} ${ad.headline||''}`.toLowerCase()
+      const text=`${ad.advertiser_name||''} ${ad.headline||''} ${getAdId(ad)}`.toLowerCase()
       const score=getScore(ad)
       return text.includes(query.toLowerCase())
         && (platform==='All'||ad.platform===platform)
@@ -301,23 +324,23 @@ function AdvertisementExplorer({ ads, loading, error, refresh }) {
       return new Date(b.created_at)-new Date(a.created_at)
     })
   },[ads,query,platform,scoreBand,sort])
-  useEffect(()=>setPage(1),[query,platform,scoreBand,sort])
   const pages=Math.max(1,Math.ceil(filtered.length/pageSize))
-  const rows=filtered.slice((page-1)*pageSize,page*pageSize)
+  const effectivePage=Math.min(page,pages)
+  const rows=filtered.slice((effectivePage-1)*pageSize,effectivePage*pageSize)
   if(loading) return <div className="page-content"><LoadingState/></div>
   if(error) return <div className="page-content"><ErrorState message={error} onRetry={refresh}/></div>
   return (
     <div className="page-content">
       <div className="welcome-row"><div><span className="eyebrow">CREATIVE LIBRARY</span><h1>Advertisements</h1><p>Search, filter, and analyze every creative.</p></div><button className="button button-secondary" onClick={refresh}><RefreshCw size={15}/>Refresh</button></div>
       <div className="filter-bar">
-        <label className="table-search"><Search size={16}/><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search advertiser or headline"/></label>
-        <select value={platform} onChange={(e)=>setPlatform(e.target.value)}><option value="All">All platforms</option>{platforms.map((item)=><option key={item}>{item}</option>)}</select>
-        <select value={scoreBand} onChange={(e)=>setScoreBand(e.target.value)}><option value="All">All scores</option><option value="High">High · 45–60</option><option value="Medium">Medium · 30–44</option><option value="Low">Low · 0–29</option></select>
-        <select value={sort} onChange={(e)=>setSort(e.target.value)}><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="score-desc">Highest score</option><option value="score-asc">Lowest score</option></select>
+        <label className="table-search"><Search size={16}/><input value={query} onChange={(e)=>{setQuery(e.target.value);setPage(1)}} placeholder="Search advertiser, headline, or ad ID"/></label>
+        <select value={platform} onChange={(e)=>{setPlatform(e.target.value);setPage(1)}}><option value="All">All platforms</option>{platforms.map((item)=><option key={item}>{item}</option>)}</select>
+        <select value={scoreBand} onChange={(e)=>{setScoreBand(e.target.value);setPage(1)}}><option value="All">All scores</option><option value="High">High · 45–60</option><option value="Medium">Medium · 30–44</option><option value="Low">Low · 0–29</option></select>
+        <select value={sort} onChange={(e)=>{setSort(e.target.value);setPage(1)}}><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="score-desc">Highest score</option><option value="score-asc">Lowest score</option></select>
       </div>
       <article className="panel data-table-panel">
-        <div className="table-scroll"><table><thead><tr><th>Creative</th><th>Platform</th><th>Headline</th><th>AI score</th><th>Format</th><th>Analyzed</th><th/></tr></thead><tbody>{rows.map((ad)=><motion.tr initial={{opacity:0}} animate={{opacity:1}} key={ad.id||ad.ad_id}><td><div className="creative-cell"><div className="creative-avatar">{(ad.advertiser_name||'UN').slice(0,2).toUpperCase()}</div><strong>{ad.advertiser_name||'Unknown'}</strong></div></td><td><span className="platform-indicator"><i/> {ad.platform||'Unknown'}</span></td><td><span className="headline-cell">{ad.headline||'—'}</span></td><td><ScoreBadge score={getScore(ad)}/></td><td>{ad.ad_format||'—'}</td><td>{formatDate(ad.created_at)}</td><td><Link className="row-action" to={`/ads/${ad.id||ad.ad_id}`} aria-label={`View ${ad.headline||'advertisement'}`}><Eye size={15}/></Link></td></motion.tr>)}</tbody></table>{!filtered.length&&<EmptyState/>}</div>
-        {filtered.length>0&&<div className="pagination"><span>{(page-1)*pageSize+1}–{Math.min(page*pageSize,filtered.length)} of {filtered.length}</span><div><button disabled={page===1} onClick={()=>setPage(page-1)}><ChevronLeft size={15}/></button><span>{page} / {pages}</span><button disabled={page===pages} onClick={()=>setPage(page+1)}><ChevronRight size={15}/></button></div></div>}
+        <div className="table-scroll"><table><thead><tr><th>Creative</th><th>Platform</th><th>Headline</th><th>AI score</th><th>Format</th><th>Analyzed</th><th/></tr></thead><tbody>{rows.map((ad)=><motion.tr initial={{opacity:0}} animate={{opacity:1}} key={getAdId(ad)}><td><div className="creative-cell"><div className="creative-avatar">{(ad.advertiser_name||'UN').slice(0,2).toUpperCase()}</div><strong>{ad.advertiser_name||'Unknown'}</strong></div></td><td><span className="platform-indicator"><i/> {ad.platform||'Unknown'}</span></td><td><span className="headline-cell" title={getAdId(ad) ? `Ad ID: ${getAdId(ad)}` : undefined}>{getDisplayHeadline(ad,ads)}</span></td><td><ScoreBadge score={getScore(ad)}/></td><td>{ad.ad_format||'—'}</td><td>{formatDate(ad.created_at)}</td><td><Link className="row-action" to={`/ads/${getAdId(ad)}`} aria-label={`View ${getDisplayHeadline(ad,ads)}`}><Eye size={15}/></Link></td></motion.tr>)}</tbody></table>{!filtered.length&&<EmptyState/>}</div>
+        {filtered.length>0&&<div className="pagination"><span>{(effectivePage-1)*pageSize+1}–{Math.min(effectivePage*pageSize,filtered.length)} of {filtered.length}</span><div><button disabled={effectivePage===1} onClick={()=>setPage(effectivePage-1)}><ChevronLeft size={15}/></button><span>{effectivePage} / {pages}</span><button disabled={effectivePage===pages} onClick={()=>setPage(effectivePage+1)}><ChevronRight size={15}/></button></div></div>}
       </article>
     </div>
   )
@@ -343,7 +366,7 @@ function Detail({ ads, loading, error, refresh }) {
       <div className="detail-hero">
         <div className="detail-ident">
           <div className="detail-avatar">{(ad.advertiser_name || 'UN').slice(0,2).toUpperCase()}</div>
-          <div><span className="platform-indicator"><i/>{ad.platform || 'Unknown'}</span><h1>{ad.headline || 'Untitled advertisement'}</h1><p>{ad.advertiser_name || 'Unknown advertiser'} · {formatDate(ad.created_at)}</p></div>
+          <div><span className="platform-indicator"><i/>{ad.platform || 'Unknown'}</span><h1>{getDisplayHeadline(ad, ads)}</h1><p>{ad.advertiser_name || 'Unknown advertiser'} · {formatDate(ad.created_at)} · Ad ID: {getAdId(ad) || '—'}</p></div>
         </div>
         <div className="score-ring" style={{ '--score': `${pct * 3.6}deg` }}>
           <div><strong>{score}</strong><span>/60</span></div>
@@ -355,7 +378,7 @@ function Detail({ ads, loading, error, refresh }) {
           <PanelHeader eyebrow="ADVERTISEMENT" title="Creative preview"/>
           <div className="creative-preview">
             <span className="preview-label">AD COPY</span>
-            <h2>{ad.headline || 'Untitled advertisement'}</h2>
+            <h2>{getDisplayHeadline(ad, ads)}</h2>
             <p>{ad.ad_copy || 'No advertisement copy is available.'}</p>
             {ad.cta_text && <span className="cta-preview">{ad.cta_text}</span>}
           </div>
@@ -401,18 +424,14 @@ function Comparison({ ads, loading, error, refresh }) {
   const [firstId, setFirstId] = useState('')
   const [secondId, setSecondId] = useState('')
 
-  useEffect(() => {
-    if (!ads.length) return
-    if (!firstId) setFirstId(String(ads[0].id || ads[0].ad_id))
-    if (!secondId && ads.length > 1) setSecondId(String(ads[1].id || ads[1].ad_id))
-  }, [ads, firstId, secondId])
-
   if (loading) return <div className="page-content"><LoadingState /></div>
   if (error) return <div className="page-content"><ErrorState message={error} onRetry={refresh} /></div>
   if (!ads.length) return <div className="page-content"><EmptyState title="No advertisements available" text="Two analyzed advertisements are required for comparison." /></div>
 
-  const first = ads.find((ad) => String(ad.id || ad.ad_id) === firstId)
-  const second = ads.find((ad) => String(ad.id || ad.ad_id) === secondId)
+  const first = ads.find((ad) => String(ad.id || ad.ad_id) === firstId) || ads[0]
+  const firstKey = first ? getAdId(first) : ''
+  const second = ads.find((ad) => String(ad.id || ad.ad_id) === secondId && String(ad.id || ad.ad_id) !== firstKey)
+    || ads.find((ad) => getAdId(ad) !== firstKey)
   const chartData = getCategoryScores(first || {}).map((item, index) => ({
     category: item.category,
     A: item.value,
@@ -429,8 +448,8 @@ function Comparison({ ads, loading, error, refresh }) {
       </div>
 
       <div className="compare-selectors">
-        <SearchableAdSelector label="Advertisement A" ads={ads} value={firstId} excludedId={secondId} onChange={setFirstId} accent="a" />
-        <SearchableAdSelector label="Advertisement B" ads={ads} value={secondId} excludedId={firstId} onChange={setSecondId} accent="b" />
+        <SearchableAdSelector label="Advertisement A" ads={ads} value={getAdId(first)} excludedId={getAdId(second)} onChange={setFirstId} accent="a" />
+        <SearchableAdSelector label="Advertisement B" ads={ads} value={getAdId(second)} excludedId={getAdId(first)} onChange={setSecondId} accent="b" />
       </div>
 
       {first && second ? <>
@@ -527,7 +546,7 @@ function SearchableAdSelector({ label, ads, value, excludedId, onChange, accent 
       <div className="ad-selector-control">
         <Search size={16} />
         <input
-          value={open ? query : (selected ? (selected.headline || selected.advertiser_name || 'Untitled advertisement') : '')}
+          value={open ? query :           (selected ? getDisplayHeadline(selected, ads) : '')}
           onFocus={() => { setOpen(true); setQuery('') }}
           onChange={(event) => { setOpen(true); setQuery(event.target.value) }}
           placeholder={`Search ${label}`}
@@ -547,7 +566,7 @@ function SearchableAdSelector({ label, ads, value, excludedId, onChange, accent 
                 className={id === value ? 'selected' : ''}
               >
                 <span className="selector-avatar">{(ad.advertiser_name || 'UN').slice(0, 2).toUpperCase()}</span>
-                <span><strong>{ad.headline || 'Untitled advertisement'}</strong><small>{ad.advertiser_name || 'Unknown advertiser'} · {ad.platform || 'Unknown'}</small></span>
+                <span><strong>{getDisplayHeadline(ad, ads)}</strong><small>{ad.advertiser_name || 'Unknown advertiser'} · {ad.platform || 'Unknown'} · ID: {getAdId(ad)}</small></span>
               </button>
             )
           }) : <p>No matching advertisements</p>}
@@ -566,7 +585,7 @@ function ComparisonCard({ label, ad, accent }) {
         <span>Advertisement {label}</span>
         <small>{ad.advertiser_name || 'Unknown advertiser'}</small>
       </div>
-      <h2>{ad.headline || 'Untitled advertisement'}</h2>
+      <h2>{getHeadline(ad)}</h2>
       <p className="comparison-score-copy">{ad.ad_copy || 'No advertisement copy is available.'}</p>
       <div className="comparison-score-row">
         <div className={`comparison-score ${accent}`}><strong>{score || '—'}</strong><span>/60</span></div>
@@ -614,11 +633,6 @@ function AdvertisementInsights({ label, ad, accent }) {
 }
 
 function Insights({ ads, loading, error, refresh }) {
-  const timeline=useMemo(()=>{
-    const groups={}
-    ads.forEach((ad)=>{if(!ad.created_at)return;const date=new Date(ad.created_at);const key=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;if(!groups[key])groups[key]={total:0,count:0};groups[key].total+=getScore(ad);groups[key].count++})
-    return Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).map(([month,value])=>({month,score:Math.round(value.total/value.count)}))
-  },[ads])
   if(loading) return <div className="page-content"><LoadingState/></div>
   if(error) return <div className="page-content"><ErrorState message={error} onRetry={refresh}/></div>
   const ranked=[...ads].sort((a,b)=>getScore(b)-getScore(a))
@@ -639,7 +653,7 @@ function Insights({ ads, loading, error, refresh }) {
       <div className="welcome-row"><div><span className="eyebrow">AI INTELLIGENCE</span><h1>Creative insights</h1><p>Patterns derived only from your existing Supabase analysis.</p></div></div>
       <div className="insight-disclaimer"><BrainCircuit size={18}/><div><strong>AI assessment, not ad performance</strong><p>These scores estimate creative quality and do not represent reach, revenue, or conversions.</p></div></div>
       <div className="insights-grid">
-        <article className="panel top-creatives"><PanelHeader eyebrow="TOP PERFORMERS" title="Highest AI quality"/>{ranked.length?<div className="ranked-list">{ranked.slice(0,5).map((ad,index)=><Link className="ranked-row" to={`/ads/${ad.id||ad.ad_id}`} key={ad.id||ad.ad_id}><span className="rank-number">{index+1}</span><div><strong>{ad.headline||'Untitled'}</strong><small>{ad.advertiser_name||'Unknown'}</small></div><div className="mini-score"><strong>{getScore(ad)}</strong><span>/60</span></div></Link>)}</div>:<EmptyState/>}</article>
+        <article className="panel top-creatives"><PanelHeader eyebrow="AI RANKING" title="Highest-Rated Creatives"/>{ranked.length?<div className="ranked-list">{ranked.slice(0,5).map((ad,index)=><Link className="ranked-row" to={`/ads/${getAdId(ad)}`} key={getAdId(ad)}><span className="rank-number">{index+1}</span><div><strong>{getDisplayHeadline(ad,ads)}</strong><small>{ad.advertiser_name||'Unknown'}</small></div><div className="mini-score"><strong>{getScore(ad)}</strong><span>/60</span></div></Link>)}</div>:<EmptyState/>}</article>
         <article className="panel theme-panel"><PanelHeader eyebrow="COMMON PATTERNS" title="Analysis themes"/><ThemeList title="Strengths" items={strengths}/><ThemeList title="Weaknesses" items={weaknesses}/><ThemeList title="Suggested improvements" items={improvements}/></article>
       </div>
     </div>
@@ -682,7 +696,14 @@ function ProtectedApp() {
   },[])
   if(session===undefined) return <div className="auth-loading"><div className="skeleton auth-skeleton"/></div>
   if(!session) return <Login/>
-  return <Shell refresh={data.refresh} onSignOut={()=>supabase.auth.signOut()} ads={data.ads}><Routes><Route path="/" element={<Overview {...data}/>}/><Route path="/ads" element={<AdvertisementExplorer {...data}/>}/><Route path="/ads/:id" element={<Detail {...data}/>}/><Route path="/compare" element={<Comparison {...data}/>}/><Route path="/insights" element={<Insights {...data}/>}/><Route path="/settings" element={<SettingsPage refresh={data.refresh}/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Shell>
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut()
+    } finally {
+      setSession(null)
+    }
+  }
+  return <Shell refresh={data.refresh} onSignOut={signOut} ads={data.ads}><Routes><Route path="/" element={<Overview {...data}/>}/><Route path="/ads" element={<AdvertisementExplorer {...data}/>}/><Route path="/ads/:id" element={<Detail {...data}/>}/><Route path="/compare" element={<Comparison {...data}/>}/><Route path="/insights" element={<Insights {...data}/>}/><Route path="/settings" element={<SettingsPage refresh={data.refresh}/>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></Shell>
 }
 
 export default ProtectedApp

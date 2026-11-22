@@ -24,12 +24,14 @@ export function safeObject(value) {
 
 export function getScore(ad) {
   const value = Number(ad?.creative_quality_score)
-  return Number.isFinite(value) ? value : 0
+  if (!Number.isFinite(value)) return 0
+  return Math.min(60, Math.max(0, value))
 }
 
 export function getScorePercent(ad) {
   const maximum = Number(ad?.maximum_score) || 60
-  return Math.round((getScore(ad) / maximum) * 100)
+  if (maximum <= 0) return 0
+  return Math.min(100, Math.max(0, Math.round((getScore(ad) / maximum) * 100)))
 }
 
 export function getCategoryScores(ad) {
