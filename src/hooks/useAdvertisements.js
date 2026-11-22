@@ -3,7 +3,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 export function useAdvertisements(enabled = true) {
   const [ads, setAds] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(Boolean(enabled))
   const [error, setError] = useState(null)
   const requestId = useRef(0)
 
@@ -43,14 +43,12 @@ export function useAdvertisements(enabled = true) {
   }, [enabled])
 
   useEffect(() => {
-    if (enabled) {
-      refresh()
-      return
+    if (!enabled) return
+    const startRequest = window.setTimeout(() => refresh(), 0)
+    return () => {
+      window.clearTimeout(startRequest)
+      requestId.current += 1
     }
-    requestId.current += 1
-    setAds([])
-    setError(null)
-    setLoading(false)
   }, [enabled, refresh])
   return { ads, loading, error, refresh }
 }
