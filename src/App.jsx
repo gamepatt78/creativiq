@@ -9,7 +9,7 @@ import {
 import {
   ArrowLeft, ArrowUpRight, BrainCircuit, ChevronLeft, ChevronRight,
   CircleGauge, Eye, LayoutDashboard, Lightbulb, LogOut,
-  Megaphone, Menu, RefreshCw, Search, Settings, Sparkles, Target,
+  Megaphone, Menu, RefreshCw, Search, Settings, Target,
   TrendingUp, Users, X,
 } from 'lucide-react'
 import Login from './pages/Login'
@@ -80,9 +80,9 @@ function Shell({ children, refresh, onSignOut, ads }) {
     <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
       <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`} aria-label="Primary navigation">
         <div className="brand-row">
-          <Link className="brand" to="/" aria-label="MySivi AI overview">
-            <span className="brand-mark"><Sparkles size={17}/></span>
-            <span className="brand-copy"><strong>MySivi</strong><small>AI Intelligence</small></span>
+          <Link className="brand" to="/" aria-label="CreativIQ overview">
+            <span className="brand-mark"><BrainCircuit size={18}/></span>
+            <span className="brand-copy"><strong>CreativIQ</strong><small>AI-Powered Creative Intelligence</small></span>
           </Link>
           <button className="sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={18}/></button>
         </div>
@@ -112,8 +112,8 @@ function Shell({ children, refresh, onSignOut, ads }) {
             <Settings size={18}/><span>Settings</span>
           </Link>
           <div className="account-row">
-            <div className="account-avatar">MS</div>
-            <div className="account-copy"><strong>MySivi Workspace</strong><span>Admin workspace</span></div>
+            <div className="account-avatar">CI</div>
+            <div className="account-copy"><strong>CreativIQ Workspace</strong><span>Admin workspace</span></div>
             <button onClick={onSignOut} aria-label="Sign out"><LogOut size={16}/></button>
           </div>
         </div>
@@ -127,7 +127,7 @@ function Shell({ children, refresh, onSignOut, ads }) {
         <header className="topbar">
           <div className="topbar-title">
             <button className="mobile-menu" onClick={() => setMobileOpen(true)} aria-label="Open navigation"><Menu size={19}/></button>
-            <div><span>MySivi Intelligence</span><strong>{current}</strong></div>
+            <div><span>CreativIQ</span><strong>{current}</strong></div>
           </div>
           <div className="topbar-actions">
             <form className="global-search" onSubmit={submitSearch}>
@@ -163,6 +163,19 @@ function ChartTooltipBox({ active, payload, label }) {
   return <div className="chart-tooltip"><span>{label}</span>{payload.map((item) => <strong key={item.dataKey} style={{ color: item.color }}>{item.value}{item.dataKey === 'score' ? '/60' : ''}</strong>)}</div>
 }
 
+function DistributionTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const item = payload[0]?.payload
+  if (!item) return null
+  return (
+    <div className="chart-tooltip">
+      <span>Creative quality</span>
+      <strong style={{ color: '#2563EB' }}>{item.name}</strong>
+      <strong>{item.count} {item.count === 1 ? 'advertisement' : 'advertisements'}</strong>
+    </div>
+  )
+}
+
 function Overview({ ads, loading, error, refresh }) {
   const metrics = useMemo(() => {
     const scored = ads.filter((ad) => getScore(ad) > 0)
@@ -174,12 +187,20 @@ function Overview({ ads, loading, error, refresh }) {
     return { average, pct, high, low }
   }, [ads])
 
-  const distribution = useMemo(() => [
-    { name: '0–20', value: ads.filter((ad) => getScore(ad) <= 20).length },
-    { name: '21–40', value: ads.filter((ad) => getScore(ad) > 20 && getScore(ad) <= 40).length },
-    { name: '41–50', value: ads.filter((ad) => getScore(ad) > 40 && getScore(ad) <= 50).length },
-    { name: '51–60', value: ads.filter((ad) => getScore(ad) > 50).length },
-  ], [ads])
+  const distribution = useMemo(() => {
+    const scored = ads.filter((ad) => getScore(ad) > 0)
+    return Array.from({ length: 12 }, (_, index) => {
+      const start = index * 5 + 1
+      const end = start + 4
+      const count = scored.filter((ad) => {
+        const score = getScore(ad)
+        return score >= start && score <= end
+      }).length
+      return { name: `${start}–${end}`, count }
+    })
+  }, [ads])
+
+  const scoredCount = ads.filter((ad) => getScore(ad) > 0).length
 
   const platformData = useMemo(() => {
     const counts = {}
@@ -208,8 +229,20 @@ function Overview({ ads, loading, error, refresh }) {
 
       <div className="overview-grid">
         <article className="panel distribution-panel">
-          <PanelHeader eyebrow="QUALITY DISTRIBUTION" title="Creative score bands" action={`${ads.length} ads`}/>
-          {ads.length ? <div className="chart-lg"><ResponsiveContainer width="100%" height="100%"><BarChart data={distribution} margin={{ top: 16, right: 8, left: -24, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)"/><XAxis dataKey="name" axisLine={false} tickLine={false}/><YAxis allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip content={<ChartTooltipBox/>} cursor={{ fill: '#F1F5F9' }}/><Bar dataKey="value" fill="#2563EB" radius={[7,7,2,2]} maxBarSize={46}/></BarChart></ResponsiveContainer></div> : <EmptyState/>}
+          <PanelHeader eyebrow="QUALITY DISTRIBUTION" title="Creative Quality Distribution" action={`${scoredCount} scored ads`}/>
+          {scoredCount ? (
+            <div className="chart-lg">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={distribution} margin={{ top: 16, right: 8, left: -24, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--chart-grid)"/>
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} tick={{ fill: 'var(--muted)', fontSize: 9 }}/>
+                  <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: 'var(--muted)', fontSize: 9 }} label={{ value: 'Advertisements', angle: -90, position: 'insideLeft', fill: 'var(--muted)', fontSize: 9 }}/>
+                  <Tooltip content={<DistributionTooltip/>} cursor={{ fill: '#F1F5F9' }}/>
+                  <Bar dataKey="count" name="Advertisements" fill="#2563EB" radius={[7,7,2,2]} maxBarSize={36}/>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : <EmptyState title="No scored advertisements" text="Creative quality scores are required for this distribution."/>}
         </article>
         <article className="panel platform-panel">
           <PanelHeader eyebrow="CHANNELS" title="By platform"/>
@@ -343,7 +376,7 @@ function Detail({ ads, loading, error, refresh }) {
       <div className="detail-grid insight-grid">
         <article className="panel insight-card strengths">
           <PanelHeader eyebrow="POSITIVE SIGNALS" title="Strengths"/>
-          {strengthItems.length ? <ul>{strengthItems.map((item,index)=><li key={index}><span><Sparkles size={13}/></span><p>{typeof item === 'string' ? item : JSON.stringify(item)}</p></li>)}</ul> : <p className="muted">No strengths available.</p>}
+          {strengthItems.length ? <ul>{strengthItems.map((item,index)=><li key={index}><span><BrainCircuit size={13}/></span><p>{typeof item === 'string' ? item : JSON.stringify(item)}</p></li>)}</ul> : <p className="muted">No strengths available.</p>}
         </article>
         <article className="panel insight-card weaknesses">
           <PanelHeader eyebrow="AREAS TO FIX" title="Weaknesses"/>
@@ -365,34 +398,106 @@ function Detail({ ads, loading, error, refresh }) {
 }
 
 function Comparison({ ads, loading, error, refresh }) {
-  const [firstId,setFirstId]=useState('')
-  const [secondId,setSecondId]=useState('')
-  useEffect(()=>{
-    if(!firstId && ads[0]) setFirstId(String(ads[0].id || ads[0].ad_id))
-    if(!secondId && ads[1]) setSecondId(String(ads[1].id || ads[1].ad_id))
-  },[ads,firstId,secondId])
-  const first=ads.find((ad)=>String(ad.id||ad.ad_id)===firstId)
-  const second=ads.find((ad)=>String(ad.id||ad.ad_id)===secondId)
-  if(loading) return <div className="page-content"><LoadingState/></div>
-  if(error) return <div className="page-content"><ErrorState message={error} onRetry={refresh}/></div>
+  const [firstId, setFirstId] = useState('')
+  const [secondId, setSecondId] = useState('')
 
-  const chartData=getCategoryScores(first || {}).map((item,index)=>({category:item.category,A:item.value,B:getCategoryScores(second || {})[index]?.value||0}))
+  useEffect(() => {
+    if (!ads.length) return
+    if (!firstId) setFirstId(String(ads[0].id || ads[0].ad_id))
+    if (!secondId && ads.length > 1) setSecondId(String(ads[1].id || ads[1].ad_id))
+  }, [ads, firstId, secondId])
+
+  if (loading) return <div className="page-content"><LoadingState /></div>
+  if (error) return <div className="page-content"><ErrorState message={error} onRetry={refresh} /></div>
+  if (!ads.length) return <div className="page-content"><EmptyState title="No advertisements available" text="Two analyzed advertisements are required for comparison." /></div>
+
+  const first = ads.find((ad) => String(ad.id || ad.ad_id) === firstId)
+  const second = ads.find((ad) => String(ad.id || ad.ad_id) === secondId)
+  const chartData = getCategoryScores(first || {}).map((item, index) => ({
+    category: item.category,
+    A: item.value,
+    B: getCategoryScores(second || {})[index]?.value || 0,
+  }))
+  const firstScore = first ? getScore(first) : 0
+  const secondScore = second ? getScore(second) : 0
+  const leader = firstScore === secondScore ? null : firstScore > secondScore ? 'A' : 'B'
+
   return (
-    <div className="page-content">
-      <div className="welcome-row"><div><span className="eyebrow">CREATIVE BENCHMARK</span><h1>Side-by-side comparison</h1><p>Compare AI quality signals across two creatives.</p></div></div>
-      <div className="compare-selectors">
-        {[['A',firstId,setFirstId],['B',secondId,setSecondId]].map(([label,value,setter])=><label key={label}><span>Creative {label}</span><select value={value} onChange={(e)=>setter(e.target.value)}><option value="">Select advertisement</option>{ads.map((ad)=><option key={ad.id||ad.ad_id} value={ad.id||ad.ad_id}>{ad.headline||ad.ad_id||ad.id}</option>)}</select></label>)}
+    <div className="page-content comparison-page">
+      <div className="welcome-row">
+        <div><span className="eyebrow">CREATIVE BENCHMARK</span><h1>Creative comparison</h1><p>Compare real AI creative quality assessments across two advertisements.</p></div>
       </div>
-      {first&&second ? <>
+
+      <div className="compare-selectors">
+        <SearchableAdSelector label="Advertisement A" ads={ads} value={firstId} excludedId={secondId} onChange={setFirstId} accent="a" />
+        <SearchableAdSelector label="Advertisement B" ads={ads} value={secondId} excludedId={firstId} onChange={setSecondId} accent="b" />
+      </div>
+
+      {first && second ? <>
+        <article className={`comparison-summary ${leader ? `leader-${leader.toLowerCase()}` : ''}`}>
+          <div className="summary-icon"><BrainCircuit size={18} /></div>
+          <div>
+            <span>AI creative quality result</span>
+            {leader
+              ? <strong>Advertisement {leader} has the higher score: {leader === 'A' ? firstScore : secondScore}/60</strong>
+              : <strong>Both advertisements have an equal AI creative quality score.</strong>}
+          </div>
+          <div className="summary-score"><strong>{Math.abs(firstScore - secondScore)}</strong><span>point difference</span></div>
+        </article>
+
         <div className="comparison-cards">
-          {[['A',first,'violet'],['B',second,'cyan']].map(([label,ad,accent])=><article className="panel comparison-card" key={label}><div className="comparison-meta"><span>{label}</span><small>{ad.advertiser_name||'Unknown advertiser'}</small></div><h2>{ad.headline||'Untitled'}</h2><div className={`comparison-score ${accent}`}><strong>{getScore(ad)}</strong><span>/60</span></div></article>)}
+          <ComparisonCard label="A" ad={first} accent="blue" />
+          <ComparisonCard label="B" ad={second} accent="violet" />
         </div>
+
         <div className="comparison-grid">
-          <article className="panel radar-panel"><PanelHeader eyebrow="CATEGORY PROFILE" title="AI score comparison"/>{chartData.length&&<div className="radar-chart"><ResponsiveContainer width="100%" height="100%"><RadarChart data={chartData}><PolarGrid stroke="var(--chart-grid)"/><PolarAngleAxis dataKey="category" tick={{fill:'var(--muted)',fontSize:10}}/><PolarRadiusAxis angle={30} domain={[0,10]} tick={false}/><Radar name="Creative A" dataKey="A" stroke="#2563EB" fill="#2563EB" fillOpacity={0.22}/><Radar name="Creative B" dataKey="B" stroke="#7C3AED" fill="#7C3AED" fillOpacity={0.16}/><Tooltip/></RadarChart></ResponsiveContainer></div>}</article>
-          <article className="panel comparison-difference"><PanelHeader eyebrow="KEY DIFFERENCE" title="Score breakdown"/><div className="difference-list">{chartData.map((item)=><div key={item.category}><span>{item.category}</span><div><i className="a" style={{width:`${item.A*10}%`}}/><i className="b" style={{width:`${item.B*10}%`}}/></div><strong>{item.A-item.B>0?'A':item.B-item.A>0?'B':'—'}</strong></div>)}</div></article>
+          <article className="panel radar-panel">
+            <PanelHeader eyebrow="CATEGORY PROFILE" title="Six-dimension AI score comparison"/>
+            <div className="radar-chart">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart data={chartData}>
+                  <PolarGrid stroke="var(--chart-grid)"/>
+                  <PolarAngleAxis dataKey="category" tick={{ fill: 'var(--muted)', fontSize: 10 }}/>
+                  <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false}/>
+                  <Radar name="Advertisement A" dataKey="A" stroke="#2563EB" fill="#2563EB" fillOpacity={0.20}/>
+                  <Radar name="Advertisement B" dataKey="B" stroke="#7C3AED" fill="#7C3AED" fillOpacity={0.16}/>
+                  <Tooltip/>
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </article>
+          <article className="panel comparison-difference">
+            <PanelHeader eyebrow="CATEGORY DIFFERENCE" title="A minus B"/>
+            <div className="difference-list">
+              {chartData.map((item) => {
+                const difference = item.A - item.B
+                return (
+                  <div key={item.category}>
+                    <span>{item.category}</span>
+                    <div className="difference-bars">
+                      <i className="a" style={{ width: `${Math.min(100, item.A * 10)}%` }}/>
+                      <i className="b" style={{ width: `${Math.min(100, item.B * 10)}%` }}/>
+                    </div>
+                    <strong className={difference > 0 ? 'a-text' : difference < 0 ? 'b-text' : ''}>
+                      {difference > 0 ? '+' : ''}{difference}
+                    </strong>
+                  </div>
+                )
+              })}
+            </div>
+          </article>
         </div>
-        <div className="comparison-copy"><article className="panel insight-card strengths"><PanelHeader eyebrow="CREATIVE A" title="Strengths"/><ListItems items={safeArray(first.strengths)}/></article><article className="panel insight-card weaknesses"><PanelHeader eyebrow="CREATIVE B" title="Weaknesses"/><ListItems items={safeArray(second.weaknesses)}/></article></div>
-      </> : <EmptyState title="Select two advertisements" text="Choose a creative in both dropdowns to begin."/>}
+
+        <div className="creative-facts-grid">
+          <CreativeFacts label="A" ad={first} accent="blue"/>
+          <CreativeFacts label="B" ad={second} accent="violet"/>
+        </div>
+
+        <div className="comparison-insights-grid">
+          <AdvertisementInsights label="A" ad={first} accent="blue"/>
+          <AdvertisementInsights label="B" ad={second} accent="violet"/>
+        </div>
+      </> : <EmptyState title="Select two different advertisements" text="Choose both advertisements to begin the comparison." />}
     </div>
   )
 }
@@ -400,6 +505,112 @@ function Comparison({ ads, loading, error, refresh }) {
 function ListItems({ items }) {
   if(!items.length) return <p className="muted">No structured AI analysis available.</p>
   return <ul>{items.map((item,index)=><li key={index}><span>{index+1}</span><p>{typeof item==='string'?item:JSON.stringify(item)}</p></li>)}</ul>
+}
+
+function SearchableAdSelector({ label, ads, value, excludedId, onChange, accent }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const selected = ads.find((ad) => String(ad.id || ad.ad_id) === value)
+  const normalizedQuery = query.trim().toLowerCase()
+  const options = ads.filter((ad) => {
+    const id = String(ad.id || ad.ad_id)
+    if (id === excludedId) return false
+    if (!normalizedQuery) return true
+    return [ad.headline, ad.advertiser_name, ad.platform, ad.ad_id, ad.id]
+      .filter(Boolean)
+      .some((field) => String(field).toLowerCase().includes(normalizedQuery))
+  })
+
+  return (
+    <div className={`ad-selector accent-${accent}`}>
+      <span className="ad-selector-label">{label}</span>
+      <div className="ad-selector-control">
+        <Search size={16} />
+        <input
+          value={open ? query : (selected ? (selected.headline || selected.advertiser_name || 'Untitled advertisement') : '')}
+          onFocus={() => { setOpen(true); setQuery('') }}
+          onChange={(event) => { setOpen(true); setQuery(event.target.value) }}
+          placeholder={`Search ${label}`}
+          aria-label={`Search ${label}`}
+        />
+        {open && <button type="button" className="ad-selector-close" onClick={() => setOpen(false)} aria-label="Close search"><X size={14}/></button>}
+      </div>
+      {open && (
+        <div className="ad-selector-menu">
+          {options.length ? options.map((ad) => {
+            const id = String(ad.id || ad.ad_id)
+            return (
+              <button
+                type="button"
+                key={id}
+                onClick={() => { onChange(id); setQuery(''); setOpen(false) }}
+                className={id === value ? 'selected' : ''}
+              >
+                <span className="selector-avatar">{(ad.advertiser_name || 'UN').slice(0, 2).toUpperCase()}</span>
+                <span><strong>{ad.headline || 'Untitled advertisement'}</strong><small>{ad.advertiser_name || 'Unknown advertiser'} · {ad.platform || 'Unknown'}</small></span>
+              </button>
+            )
+          }) : <p>No matching advertisements</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ComparisonCard({ label, ad, accent }) {
+  const score = getScore(ad)
+  const pct = Math.min(100, getScorePercent(ad))
+  return (
+    <motion.article className={`panel comparison-card accent-${accent}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+      <div className="comparison-meta">
+        <span>Advertisement {label}</span>
+        <small>{ad.advertiser_name || 'Unknown advertiser'}</small>
+      </div>
+      <h2>{ad.headline || 'Untitled advertisement'}</h2>
+      <p className="comparison-score-copy">{ad.ad_copy || 'No advertisement copy is available.'}</p>
+      <div className="comparison-score-row">
+        <div className={`comparison-score ${accent}`}><strong>{score || '—'}</strong><span>/60</span></div>
+        <div className="comparison-percent"><strong>{score ? `${pct}%` : '—'}</strong><span>AI quality</span></div>
+      </div>
+    </motion.article>
+  )
+}
+
+function CreativeFacts({ label, ad, accent }) {
+  const facts = [
+    ['Hook', ad.hook],
+    ['Value proposition', ad.value_proposition],
+    ['Target audience', ad.target_audience],
+    ['Creative angle', ad.creative_angle],
+  ]
+  return (
+    <article className={`panel creative-facts accent-${accent}`}>
+      <PanelHeader eyebrow={`CREATIVE ${label}`} title="Creative direction"/>
+      <div className="creative-facts-list">
+        {facts.map(([title, value]) => <div key={title}><span>{title}</span><p>{value || 'Not available in the record.'}</p></div>)}
+      </div>
+    </article>
+  )
+}
+
+function AdvertisementInsights({ label, ad, accent }) {
+  return (
+    <article className={`comparison-insight-column accent-${accent}`}>
+      <div className="comparison-insight-header"><span>CREATIVE {label}</span><strong>AI analysis</strong></div>
+      <div className="panel insight-card strengths">
+        <PanelHeader eyebrow="POSITIVE SIGNALS" title="Strengths"/>
+        <ListItems items={safeArray(ad.strengths)}/>
+      </div>
+      <div className="panel insight-card weaknesses">
+        <PanelHeader eyebrow="AREAS TO FIX" title="Weaknesses"/>
+        <ListItems items={safeArray(ad.weaknesses)}/>
+      </div>
+      <div className="panel insight-card improvements">
+        <PanelHeader eyebrow="NEXT ACTIONS" title="Improvement suggestions"/>
+        <ListItems items={safeArray(ad.improvement_suggestions)}/>
+      </div>
+    </article>
+  )
 }
 
 function Insights({ ads, loading, error, refresh }) {

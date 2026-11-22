@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
+import { BrainCircuit, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import signinBackground from '../assets/signin-background.png'
 
@@ -14,8 +14,9 @@ export default function Login() {
     return (
       <main className="auth-page" style={{ '--auth-background': `url("${signinBackground}")` }}>
         <section className="auth-card auth-config-card" aria-live="polite">
-          <div className="auth-logo">M</div>
-          <p className="auth-kicker">MY SIVI INTELLIGENCE</p>
+          <div className="auth-logo" aria-hidden="true"><BrainCircuit size={22}/></div>
+          <p className="auth-kicker">CreativIQ</p>
+          <p className="auth-tagline">AI-Powered Creative Intelligence</p>
           <h1>Dashboard configuration required</h1>
           <p className="auth-subtitle">
             Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>
@@ -39,8 +40,9 @@ export default function Login() {
     <main className="auth-page" style={{ '--auth-background': `url("${signinBackground}")` }}>
       <section className="auth-card" aria-labelledby="login-title">
         <header className="auth-header">
-          <div className="auth-logo" aria-hidden="true">M</div>
-          <p className="auth-kicker">MY SIVI INTELLIGENCE</p>
+          <div className="auth-logo" aria-hidden="true"><BrainCircuit size={22}/></div>
+          <p className="auth-kicker">CreativIQ</p>
+          <p className="auth-tagline">AI-Powered Creative Intelligence</p>
           <h1 id="login-title">Sign in to your workspace</h1>
           <p className="auth-subtitle">
             <ShieldCheck size={14} aria-hidden="true" />
